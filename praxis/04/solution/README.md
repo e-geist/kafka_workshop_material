@@ -1,0 +1,6 @@
+# Message Offsets und Consumer Groups Lösung
+
+- Lösung zu **3.**: Beide Consumer müssen dieselbe Consumer Group haben -> Dann werden die Partitionen unter den Consumern aufgeteilt und die Nachrichten jeder Partition jeweils nur durch einen Consumer verarbeitet. Damit findet nur eine einmalige Verarbeitung jeder Message statt.
+- Lösung zu **6.**: Je nach Client startet der Offset einer neuen Consumer Group bei der ältesten Message (*from beginning*) oder nach der aktuellsten Message (*latest*) -> Der Console Consumer startet nach der aktuellsten Message und erhält nur Messages, die nach der Erstellung der Consumer Group produziert werden.
+- Lösung zu **7.**: Mit `--from-beginning` wird der Console Consumer gezwungen bei den ältesten Messages des Topics zu starten. Dadurch können Messages, die vorher bereits existierten, nachverarbeitet werden.
+- Lösung zu **8.**: Beide Consumer müssen unterschiedliche Consumer Groups haben -> Unterschiedliche Consumer Groups führen dazu, dass jeder der Consumer jede Partition für sich verarbeitet. Damit findet auch eine mehrfache Verarbeitung jeder Message statt.
