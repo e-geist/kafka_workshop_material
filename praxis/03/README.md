@@ -18,8 +18,8 @@
 
 1. Nachrichten senden mit Key mithilfe des producers, am besten mehrfach und mit verschiedenen Keys, um Zuordnung zu Partitionen zu sehen. Key und Value sind durch `-` getrennt:
     ```bash
-    echo "Key1-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test
-    echo "key1-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test
-    echo "Key2-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test
-    echo "Key2-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test
+    echo "Key1-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test --property parse.key=true --property key.separator=-
+    echo "Key1-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test --property parse.key=true --property key.separator=-
+    echo "Key2-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test --property parse.key=true --property key.separator=-
+    echo "Key2-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test --property parse.key=true --property key.separator=-
     ```

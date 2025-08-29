@@ -22,10 +22,10 @@
 
 1. In neuem Fenster Nachrichten mit Producer senden - am besten mehrfach mit verschiedenen Keys:
     ```bash
-    echo "Key1-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test
-    echo "key1-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test
-    echo "Key2-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test
-    echo "Key2-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test
+    echo "Key1-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test --property parse.key=true --property key.separator=-
+    echo "key1-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test --property parse.key=true --property key.separator=-
+    echo "Key2-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test --property parse.key=true --property key.separator=-
+    echo "Key2-TestNachricht" | ./kafka-console-producer.sh --bootstrap-server localhost:9092 --topic test --property parse.key=true --property key.separator=-
     ```
     1. Consumer Ausgaben betrachten
     1. Details über vorgegebene Consumer Group abrufen wie in 3. beschrieben
@@ -43,7 +43,7 @@
     1. Details über vorgegebene Consumer Group abrufen wie in 3. beschrieben
     1. Wie erklären wir das Verhalten?
     
-1. Zwei Consumer, wie in 4. beschrieben starten, die die Nachrichten des Topics separat voneinander, also mehrfach, verarbeiten:
+1. Zwei Consumer, wie in 4. beschrieben starten, die die Nachrichten des Topics **separat voneinander**, also mehrfach, verarbeiten:
     1. Messages produzieren, wie in 5. beschrieben
     1. Consumer Ausgaben betrachten
     1. Details über vorgegebene Consumer Groups abrufen, wie in 3. beschrieben

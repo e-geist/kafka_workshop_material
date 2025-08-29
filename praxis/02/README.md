@@ -20,13 +20,13 @@
 1. Details über Topic `test` anzeigen (muss in /opt/kafka/bin/ im laufenden Broker Container ausgeführt werden):
     ```
     bash
-    ./kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic Test
+    ./kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic test
     ```
 
 1. Topic `test` löschen (muss in /opt/kafka/bin/ im laufenden Broker Container ausgeführt werden):
     ```
     bash
-    ./kafka-topics.sh --bootstrap-server localhost:9092 --delete --topic Test
+    ./kafka-topics.sh --bootstrap-server localhost:9092 --delete --topic test
     ```
 
 1. console producer und consumer Operationen führen wieder zu Fehlern, da Topic nicht mehr existiert
