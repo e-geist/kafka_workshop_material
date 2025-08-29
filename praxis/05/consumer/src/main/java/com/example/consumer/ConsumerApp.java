@@ -9,7 +9,7 @@ import java.util.Collections;
 import java.util.Properties;
 
 public class ConsumerApp {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         String topicName = ?; // Namen für das Topic hinterlegen, das konsumiert werden soll
 
         Properties props = new Properties();
