@@ -1,0 +1,17 @@
+app:
+  topic: measurements
+
+spring:
+  kafka:
+    bootstrap-servers: kafka:19092
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # liest Schema ID aus der Nachricht und lädt das Schema von der Schema Registry
+      value-deserializer: io.confluent.kafka.serializers.json.KafkaJsonSchemaDeserializer
+      properties:
+        schema.registry.url: http://schema-registry:8081
+        # Zielklasse für die Deserialisierung
+        json.value.type: com.example.consumer.Measurement
+        # Part 2: unbekannte Felder neuerer Schema Versionen ignorieren
+        json.fail.unknown.properties: false

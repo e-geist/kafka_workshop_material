@@ -1,0 +1,11 @@
+apiVersion: kafka.strimzi.io/v1
+kind: ? # Strimzi Ressource für ein Topic
+metadata:
+  name: workshop-topic
+  labels:
+    strimzi.io/cluster: ? # Kafka Cluster, in dem das Topic angelegt wird
+spec:
+  partitions: ? # 3 Partitionen
+  replicas: ? # Replikationsfaktor 3
+  config:
+    retention.ms: 7200000

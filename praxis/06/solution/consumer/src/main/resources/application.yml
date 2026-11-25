@@ -1,0 +1,18 @@
+app:
+  topic: spring_topic
+
+spring:
+  kafka:
+    bootstrap-servers: kafka:19092
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # Part 4: Value als JSON deserialisieren
+      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+      properties:
+        # Typ-Header vom Producer (com.example.producer.Measurement) ignorieren und eigene Klasse nutzen
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.example.consumer.Measurement
+    listener:
+      # Part 2: Offsets manuell über Acknowledgment committen
+      ack-mode: manual

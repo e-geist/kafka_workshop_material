@@ -1,0 +1,13 @@
+app:
+  topic: measurements
+
+spring:
+  kafka:
+    bootstrap-servers: kafka:19092
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: ? # Confluent JSON Schema Deserializer: lädt Schema anhand der Schema ID von der Schema Registry
+      properties:
+        ?: ? # URL der Schema Registry (Service schema-registry, Port 8081)
+        ?: ? # Zielklasse für die Deserialisierung: com.example.consumer.Measurement

@@ -1,0 +1,10 @@
+app:
+  topic: spring_topic
+
+spring:
+  kafka:
+    bootstrap-servers: ? # Host und Port des Kafka Brokers im Docker Netzwerk (siehe docker-compose.yml)
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer

@@ -1,0 +1,10 @@
+app:
+  topic: spring_topic
+
+spring:
+  kafka:
+    bootstrap-servers: kafka:19092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # Part 4: Value als JSON serialisieren
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer

@@ -1,0 +1,25 @@
+app:
+  topic: measurements
+
+spring:
+  kafka:
+    bootstrap-servers: kafka:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+    # TLS: Truststore mit dem CA Zertifikat aus dem Volume certs
+    ssl:
+      trust-store-location: file:/certs/truststore.p12
+      trust-store-password: changeit
+      trust-store-type: PKCS12
+    security:
+      protocol: SASL_SSL
+    properties:
+      # Token per Client Credentials von Keycloak holen und als OAUTHBEARER an den Broker senden
+      sasl.mechanism: OAUTHBEARER
+      sasl.jaas.config: org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;
+      sasl.login.callback.handler.class: org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginCallbackHandler
+      sasl.oauthbearer.token.endpoint.url: http://keycloak:8080/realms/workshop/protocol/openid-connect/token
+      # Client ID und Secret aus Umgebungsvariablen, nicht im Repository
+      sasl.oauthbearer.client.credentials.client.id: ${OIDC_CLIENT_ID}
+      sasl.oauthbearer.client.credentials.client.secret: ${OIDC_CLIENT_SECRET}

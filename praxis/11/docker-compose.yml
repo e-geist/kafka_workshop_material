@@ -1,0 +1,9 @@
+name: kafka_workshop_11
+services:
+  # Werkzeug-Container: startet über den Docker Socket des Hosts einen Kubernetes Cluster mit kind
+  tools:
+    build: ./tools
+    pull_policy: build
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./k8s:/workspace/k8s

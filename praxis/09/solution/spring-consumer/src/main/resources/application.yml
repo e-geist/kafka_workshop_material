@@ -1,0 +1,17 @@
+app:
+  topic: asdf
+
+spring:
+  kafka:
+    bootstrap-servers: kafka:19092
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # Deserialisierungsfehler abfangen und an Error Handler weitergeben, statt endlos an Nachricht hängen zu bleiben
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        # eigentlicher Deserializer, an den ErrorHandlingDeserializer delegiert
+        spring.deserializer.value.delegate.class: com.example.springconsumer.ValueFormatDeserializer
+    producer:
+      # für Dead Letter Topic: String (Verarbeitungsfehler) oder byte[] (Deserialisierungsfehler)
+      value-serializer: org.springframework.kafka.support.serializer.StringOrBytesSerializer

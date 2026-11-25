@@ -1,0 +1,9 @@
+app:
+  topic: spring_topic
+
+spring:
+  kafka:
+    bootstrap-servers: ? # Host und Port des Kafka Brokers im Docker Netzwerk (siehe docker-compose.yml)
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer

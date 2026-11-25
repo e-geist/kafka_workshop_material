@@ -1,0 +1,84 @@
+name: kafka_workshop_12
+services:
+  # erzeugt einmalig CA, Broker Zertifikat und Truststore im Volume certs
+  certs:
+    image: apache/kafka:4.4.0
+    user: root
+    entrypoint: /scripts/create-certs.sh
+    volumes:
+      - ./certs/create-certs.sh:/scripts/create-certs.sh:ro
+      - certs:/certs
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.5
+    container_name: keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: 'true'
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./keycloak/realm-workshop.json:/opt/keycloak/data/import/realm-workshop.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/9000; printf \"GET /health/ready HTTP/1.0\\r\\n\\r\\n\" >&3; grep -q UP <&3'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  kafka:
+    image: apache/kafka:4.4.0
+    hostname: kafka
+    container_name: kafka
+    command: /etc/kafka/start.sh
+    environment:
+      CLUSTER_ID: '4L6g3nShT-eMCtK--X86sw'
+      # seit Kafka 4.0: erlaubte URLs für OAUTHBEARER müssen explizit freigegeben werden
+      KAFKA_OPTS: '-Dorg.apache.kafka.sasl.oauthbearer.allowed.urls=http://keycloak:8080/realms/workshop/protocol/openid-connect/certs'
+    volumes:
+      - ./kafka/start.sh:/etc/kafka/start.sh:ro
+      - ./kafka/server.properties:/etc/kafka/server.properties:ro
+      - ./kafka/log4j2.yaml:/etc/kafka/log4j2.yaml:ro
+      - ./client:/etc/kafka/client:ro
+      - certs:/etc/kafka/secrets:ro
+    depends_on:
+      certs:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: /opt/kafka/bin/kafka-cluster.sh cluster-id --bootstrap-server kafka:9092 --config /etc/kafka/client/admin.properties || exit 1
+      interval: 5s
+      timeout: 20s
+      retries: 20
+
+  producer:
+    build: ./producer
+    pull_policy: build
+    environment:
+      OIDC_CLIENT_ID: measurement-producer
+      OIDC_CLIENT_SECRET: producer-oidc-secret
+      # seit Kafka 4.0: erlaubte URL für den Token Endpoint explizit freigeben
+      JAVA_TOOL_OPTIONS: '-Dorg.apache.kafka.sasl.oauthbearer.allowed.urls=http://keycloak:8080/realms/workshop/protocol/openid-connect/token'
+    volumes:
+      - certs:/certs:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  consumer:
+    build: ./consumer
+    pull_policy: build
+    environment:
+      OIDC_CLIENT_ID: measurement-consumer
+      OIDC_CLIENT_SECRET: consumer-oidc-secret
+      JAVA_TOOL_OPTIONS: '-Dorg.apache.kafka.sasl.oauthbearer.allowed.urls=http://keycloak:8080/realms/workshop/protocol/openid-connect/token'
+    volumes:
+      - certs:/certs:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+volumes:
+  certs:

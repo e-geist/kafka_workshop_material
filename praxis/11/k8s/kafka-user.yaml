@@ -1,0 +1,26 @@
+# Bonus: Benutzer, der das Topic nur lesen darf
+apiVersion: kafka.strimzi.io/v1
+kind: ? # Strimzi Ressource für einen Benutzer
+metadata:
+  name: workshop-user
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: ? # Authentifizierung über Benutzername + Passwort (SCRAM-SHA-512), Passwort wird vom User Operator als Secret workshop-user abgelegt
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: workshop-topic
+          patternType: literal
+        operations: # Topic beschreiben und lesen
+          - ?
+          - ?
+      - resource:
+          type: group
+          name: workshop-group
+          patternType: literal
+        operations:
+          - Read

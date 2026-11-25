@@ -1,0 +1,11 @@
+app:
+  topic: measurements
+
+spring:
+  kafka:
+    bootstrap-servers: kafka:19092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: ? # Confluent JSON Schema Serializer: generiert Schema aus der Klasse, registriert es und schreibt die Schema ID in jede Nachricht
+      properties:
+        ?: ? # URL der Schema Registry (Service schema-registry, Port 8081)

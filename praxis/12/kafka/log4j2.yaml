@@ -1,0 +1,16 @@
+# Alle Logs auf stdout, Entscheidungen des Authorizers (kafka.authorizer.logger) ebenfalls
+Configuration:
+  Appenders:
+    Console:
+      name: STDOUT
+      PatternLayout:
+        pattern: "[%d] %p %m (%c)%n"
+  Loggers:
+    Root:
+      level: INFO
+      AppenderRef:
+        - ref: STDOUT
+    Logger:
+      # INFO: abgelehnte Zugriffe, DEBUG: auch erlaubte Zugriffe
+      - name: kafka.authorizer.logger
+        level: INFO
