@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kafka Architekturen interaktiv</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#eef1f5;color:#1b2230}
+header{display:flex;align-items:center;gap:18px;padding:10px 20px;background:#111827;color:#f9fafb;flex-wrap:wrap}
+header h1{font-size:17px;margin:0;font-weight:650}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{background:transparent;color:#cbd5e1;border:1px solid #374151;border-radius:8px;padding:6px 12px}
+.tabs button:hover{background:#1f2937}
+.tabs button.on{background:#f97316;border-color:#f97316;color:#111827;font-weight:650}
+.ctrl{margin-left:auto;display:flex;gap:10px;align-items:center;font-size:13px;color:#cbd5e1}
+.ctrl button{background:#1f2937;color:#f9fafb;border-color:#374151}
+.ctrl button:hover{background:#374151}
+.ctrl select{background:#1f2937;color:#f9fafb;border:1px solid #374151;border-radius:6px;padding:4px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:16px;padding:16px 20px;align-items:start}
+@media(max-width:1250px){main{grid-template-columns:1fr}.info{position:static!important;max-height:none!important}}
+.stage{background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.08);min-width:0}
+.info{background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.08);position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;font-size:14px}
+.info h2{font-size:18px;margin:0 0 6px}
+.info h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin:14px 0 4px}
+.info ol,.info ul{padding-left:20px;margin:4px 0}
+.info li{margin:3px 0}
+.info p{margin:4px 0}
+.hint{background:#eff6ff;border-left:4px solid #3b82f6;padding:6px 10px;border-radius:4px;font-size:13px;margin:6px 0}
+.events{font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0f172a;color:#e2e8f0;border-radius:8px;padding:8px 10px;height:200px;overflow:auto}
+.events .t{color:#94a3b8;margin-right:4px}
+.events .warn{color:#fcd34d}.events .err{color:#fca5a5}.events .ok{color:#86efac}
+button{font:inherit;cursor:pointer;border:1px solid #cbd5e1;background:#fff;color:inherit;border-radius:8px;padding:5px 11px}
+button:hover{background:#f1f5f9}
+button.primary{background:#ea580c;border-color:#ea580c;color:#fff}
+button.primary:hover{background:#c2410c}
+button:disabled{opacity:.4;cursor:default}
+button.small{font-size:12px;padding:1px 7px;border-radius:6px}
+select{font:inherit;font-size:13px;padding:3px 4px;border-radius:6px;border:1px solid #cbd5e1}
+label{font-size:13px;display:inline-flex;gap:6px;align-items:center}
+code{font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#f3f4f6;padding:1px 5px;border-radius:4px}
+.muted{color:#6b7280}
+.statusbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding-bottom:12px;border-bottom:1px solid #e5e7eb;margin-bottom:14px}
+.clock{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums;display:flex;gap:10px;align-items:center}
+.flow{display:grid;gap:18px;align-items:start}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.colhead{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;font-weight:650}
+.node{--c:#475569;border:2px solid var(--c);border-radius:12px;padding:9px 11px;background:color-mix(in srgb,var(--c) 5%,white);transition:opacity .3s,filter .3s}
+.node.prod{--c:#2563eb}.node.topic{--c:#ea580c}.node.cons{--c:#16a34a}.node.db{--c:#7c3aed}.node.svc{--c:#475569}
+.node.off{opacity:.5;filter:grayscale(1)}
+.node .title{font-weight:650;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.node .sub{font-size:12.5px;color:#4b5563;margin-top:2px}
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.pulse{animation:pulse .7s}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 55%,transparent)}100%{box-shadow:0 0 0 12px transparent}}
+.badge{font-size:11.5px;font-weight:650;padding:2px 8px;border-radius:99px;background:#e5e7eb;color:#374151;white-space:nowrap}
+.badge.live{background:#dcfce7;color:#166534}.badge.replay{background:#fef3c7;color:#92400e}.badge.down{background:#fee2e2;color:#991b1b}.badge.info{background:#e0e7ff;color:#3730a3}
+.stats{font-size:13px;margin-top:4px}
+.cfg{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.cells{display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start;min-height:46px}
+.logbox{margin-top:8px;max-height:460px;overflow:auto;padding:2px 2px 8px}
+.rec{position:relative;width:40px;min-height:40px;border-radius:6px;background:#fff;border:1px solid #cbd5e1;border-top:5px solid var(--k);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;line-height:1.15;padding:2px 0;cursor:default;transition:transform .4s,opacity .4s}
+.rec b{font-weight:700}
+.rec i{font-style:normal;font-size:10px;color:#6b7280}
+.rec u{text-decoration:none;font-size:10.5px}
+.rec.new{animation:recin .4s}
+@keyframes recin{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+.rec.old{background:#f1f5f9;border-style:dashed;border-top-style:solid}
+.rec.sup{opacity:.38}
+.rec.clean{background:#ecfdf5}
+.rec.dirty{outline:2px dashed #ea580c;outline-offset:-1px}
+.rec.tomb{background:#1f2937;color:#fff}.rec.tomb i{color:#cbd5e1}
+.rec.big{background:#fee2e2}
+.rec.removing{transform:scale(0);opacity:0}
+.rec .mk{position:absolute;bottom:-6px;left:0;right:0;display:flex;justify-content:center;gap:2px}
+.rec .mk s{width:9px;height:9px;border-radius:50%;border:1.5px solid #fff;display:block}
+.kdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--k);margin-right:5px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#4b5563;margin-top:8px;align-items:center}
+.legend .rec{width:18px;min-height:16px;border-top-width:3px;display:inline-flex;vertical-align:middle;margin-right:4px}
+.empty{font-size:12.5px;color:#9ca3af;align-self:center}
+table.state{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px;font-variant-numeric:tabular-nums}
+table.state th{font-weight:600;color:#6b7280;font-size:11.5px}
+table.state td,table.state th{padding:2px 5px;border-bottom:1px solid #eef0f3;text-align:left}
+table.state td.num,table.state th.num{text-align:right}
+table.state tr.stale td{background:#fef3c7}
+table.state tr.miss td{background:#fee2e2;color:#991b1b}
+table.state tr.flash td{animation:flash 1.1s}
+@keyframes flash{from{background:#fde68a}to{background:transparent}}
+td.act{white-space:nowrap;text-align:right}
+table.state td{white-space:nowrap}
+.seg{border:1px solid #fed7aa;border-radius:8px;padding:5px 6px 8px;margin-bottom:6px;background:#fff}
+.seg.active{border:1.5px dashed #ea580c;background:#fff7ed}
+.seghead{font-size:11.5px;color:#9a3412;margin-bottom:4px}
+.meter{display:inline-block;position:relative;width:110px;height:9px;background:#e5e7eb;border-radius:99px;vertical-align:middle;margin:0 6px;overflow:hidden}
+.meter span{position:absolute;left:0;top:0;bottom:0;background:#ea580c;border-radius:99px;transition:width .3s}
+.meter em{position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;background:#111827}
+.lane{border-radius:12px;padding:10px 12px 12px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(250px,1fr);gap:16px;align-items:start}
+.lane.speed{background:#fff7ed;border:1px solid #fed7aa}
+.lane.batch{background:#f5f3ff;border:1px solid #ddd6fe}
+.lanehead{grid-column:1/-1;font-weight:650;font-size:13.5px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.stream div{font-size:12.5px;padding:2px 4px;border-bottom:1px solid #eef0f3;font-variant-numeric:tabular-nums}
+.stream div.alarm{background:#fee2e2;color:#991b1b;font-weight:650}
+.pos{color:#15803d}.neg{color:#b91c1c}
+.token{position:fixed;left:0;top:0;z-index:50;padding:3px 9px;border-radius:99px;color:#fff;font-size:12px;font-weight:650;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3);white-space:nowrap}
+.arrow{color:#9ca3af;font-size:22px;text-align:center;align-self:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>Kafka Architekturen interaktiv</h1>
+  <nav class="tabs" id="tabs">
+    <button data-tab="0">1. Temporärer Speicher</button>
+    <button data-tab="1">2. Datenlieferant (Compaction)</button>
+    <button data-tab="2">3. Lambda Architektur</button>
+  </nav>
+  <div class="ctrl">
+    <button id="pause" title="Leertaste">Pause</button>
+    <label>Tempo <select id="speed"><option value="0.5">0,5x</option><option value="1" selected>1x</option><option value="2">2x</option><option value="4">4x</option></select></label>
+    <button id="reset">↺ Neu starten</button>
+  </div>
+</header>
+<main>
+  <section class="stage" id="stage"></section>
+  <aside class="info" id="info"></aside>
+</main>
+<div id="fly"></div>
+
+<script>
+"use strict";
+/* ---------- Hilfsfunktionen ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clone = o => JSON.parse(JSON.stringify(o));
+const sgn = n => (n > 0 ? '+' : '') + n;
+const hm = m => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+const KEYCOL = ['#2563eb', '#db2777', '#059669', '#d97706', '#7c3aed', '#0891b2', '#dc2626', '#4d7c0f'];
+const keyColor = k => KEYCOL[(parseInt(k.slice(1), 10) - 1) % KEYCOL.length];
+const kdot = k => `<span class="kdot" style="--k:${keyColor(k)}"></span>`;
+function pulse(el) { if (!el) return; el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); }
+function keepBottom(el, fn) {
+  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  fn();
+  if (atBottom) el.scrollTop = el.scrollHeight;
+}
+function log(msg, kind = '') {
+  const el = $('#events'); if (!el) return;
+  const d = document.createElement('div');
+  d.className = kind;
+  d.innerHTML = `<span class="t">${Sim.clock ? Sim.clock() : ''}</span>${msg}`;
+  el.prepend(d);
+  while (el.children.length > 100) el.lastChild.remove();
+}
+
+/* ---------- Simulationstakt (pausierbar, Tempo einstellbar) ---------- */
+const layer = $('#fly');
+const anims = new Set();
+const Sim = {
+  speed: 1, paused: false, gen: 0, tasks: new Set(), clock: null,
+  every(ms, fn) { const t = { ms, acc: 0, fn, rep: true }; this.tasks.add(t); return t; },
+  after(ms, fn) { const t = { ms, acc: 0, fn, rep: false }; this.tasks.add(t); return t; },
+  reset() { this.tasks.clear(); this.gen++; anims.forEach(a => a.cancel()); anims.clear(); layer.innerHTML = ''; this.clock = null; }
+};
+setInterval(() => {
+  if (Sim.paused) return;
+  const dt = 50 * Sim.speed;
+  for (const t of [...Sim.tasks]) {
+    if (!Sim.tasks.has(t)) continue;
+    t.acc += dt;
+    if (t.rep) { let n = 0; while (t.acc >= t.ms && n < 10) { t.acc -= t.ms; t.fn(); n++; } }
+    else if (t.acc >= t.ms) { Sim.tasks.delete(t); t.fn(); }
+  }
+}, 50);
+
+/* Nachricht fliegt sichtbar von einem Element zum anderen */
+function fly(from, to, opt, done) {
+  const gen = Sim.gen;
+  if (!from || !to) { if (done) done(); return; }
+  const a = from.getBoundingClientRect(), b = to.getBoundingClientRect();
+  const d = document.createElement('div');
+  d.className = 'token';
+  d.textContent = opt.label || '';
+  d.style.background = opt.color || '#334155';
+  layer.appendChild(d);
+  const w = d.offsetWidth, h = d.offsetHeight;
+  const p0 = `translate(${a.left + a.width / 2 - w / 2}px,${a.top + a.height / 2 - h / 2}px)`;
+  const p1 = `translate(${b.left + b.width / 2 - w / 2}px,${b.top + b.height / 2 - h / 2}px)`;
+  const anim = d.animate([{ transform: p0 }, { transform: p1 }],
+    { duration: Math.max(120, (opt.dur || 700) / Sim.speed), easing: 'ease-in-out', fill: 'forwards' });
+  anims.add(anim);
+  if (Sim.paused) anim.pause();
+  anim.onfinish = () => { anims.delete(anim); d.remove(); if (gen === Sim.gen && done) done(); };
+}
+const lastOrSelf = el => (el && el.lastElementChild && el.lastElementChild.classList.contains('rec')) ? el.lastElementChild : el;
+
+/* =====================================================================
+   Szenario 1: Kafka als temporärer Speicher
+   ===================================================================== */
+const INFO1 = `
+<h2>1. Kafka als temporärer Speicher</h2>
+<p>Mehrere Producer schreiben Statusänderungen von Fahrzeugen in ein Topic (Key = Fahrzeug). Die Consumer halten ihren Zustand nur im Arbeitsspeicher. Im Betrieb erhalten sie jede Änderung in Echtzeit. Nach jedem Neustart (am nächsten Tag oder nach einem Absturz) lesen sie das Topic vom Anfang und bauen so den aktuellen Zustand wieder auf.</p>
+<h3>Vorführen</h3>
+<ol>
+<li>Laufen lassen: Änderungen kommen sofort bei allen Consumern an.</li>
+<li><b>Absturz und Neustart</b> bei einem Consumer: Replay ab dem Log Start Offset (Punkt in Consumer Farbe im Topic), danach wieder Echtzeit.</li>
+<li><b>Betriebsende vorziehen</b>, dann <b>Nächsten Tag starten</b>: alle Consumer lesen das komplette Topic und haben wieder den Stand vom Vorabend.</li>
+<li><code>retention.ms</code> auf 1 Stunde stellen und den Tag wechseln: die Nachrichten vom Vortag sind gelöscht, der Zustand fehlt (rot).</li>
+<li>Fehlerfall aktivieren und einen Consumer neu starten: ab dem committed Offset fehlt der bisherige Zustand.</li>
+</ol>
+<h3>Konfiguration</h3>
+<ul>
+<li>Consumer ohne Consumer Group Offsets: <code>assign()</code> plus <code>seekToBeginning()</code>, alternativ bei jedem Start eine neue <code>group.id</code> mit <code>auto.offset.reset=earliest</code></li>
+<li><code>enable.auto.commit=false</code>, committed Offsets werden hier nicht gebraucht</li>
+<li>Topic: <code>cleanup.policy=delete</code>, <code>retention.ms</code> länger als die längste Betriebspause (Wochenende, Feiertage)</li>
+<li>Key = Entität, damit alle Änderungen eines Fahrzeugs in derselben Partition und damit in Reihenfolge liegen</li>
+</ul>
+<h3>Hinweise</h3>
+<div class="hint">Hinweis: Retention löscht ganze Segmente (abhängig von <code>segment.ms</code> und <code>segment.bytes</code>), nicht einzelne Nachrichten. Die Simulation löscht vereinfacht jede Nachricht einzeln und nutzt nur eine Partition.</div>
+<div class="hint">Hinweis: Nach dem Löschen beginnen die Offsets nicht wieder bei 0. Nur der Log Start Offset wandert nach vorne.</div>
+<div class="hint">Hinweis: Die Dauer des Replays wächst mit der Größe des Topics. Mit <code>cleanup.policy=compact,delete</code> bleibt pro Key nur die letzte Nachricht übrig (siehe Szenario 2).</div>
+`;
+
+function scenario1(stage, info) {
+  const STATUS = ['Im Depot', 'Beladung', 'Unterwegs', 'Beim Kunden', 'Pause', 'Rückfahrt'];
+  const KEYS = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6'];
+  const CCOL = ['#15803d', '#0e7490', '#a16207'];
+  const st = {
+    abs: 6 * 60, running: true, retention: 1440, commitMode: false,
+    records: [], nextOffset: 0, truth: {},
+    producers: [
+      { name: 'Telematik Nord', keys: ['F1', 'F2'] },
+      { name: 'Telematik Süd', keys: ['F3', 'F4'] },
+      { name: 'Telematik Ost', keys: ['F5', 'F6'] }],
+    consumers: ['Leitstand', 'Kundenportal', 'Reporting'].map((n, i) => ({
+      name: n, col: CCOL[i], pos: 0, committed: 0, state: {}, mode: 'live', busy: false, epoch: 0,
+      replayEnd: 0, replayCount: 0, replayTotal: 0 }))
+  };
+  const day = () => Math.floor(st.abs / 1440) + 1;
+  const tod = () => st.abs % 1440;
+  const logStart = () => st.records.length ? st.records[0].offset : st.nextOffset;
+  const next = pos => st.records.find(r => r.offset >= pos);
+  Sim.clock = () => `Tag ${day()} ${hm(tod())}`;
+
+  info.innerHTML = INFO1 + '<h3>Ereignisse</h3><div class="events" id="events"></div>';
+  stage.innerHTML = `
+  <div class="statusbar">
+    <div class="clock"><span id="s1-clock"></span><span class="badge" id="s1-phase"></span></div>
+    <button id="s1-end">Betriebsende vorziehen</button>
+    <button id="s1-next" class="primary">Nächsten Tag starten</button>
+    <label><code>retention.ms</code> <select id="s1-ret">
+      <option value="60">1 Stunde (zu kurz)</option>
+      <option value="1440" selected>24 Stunden</option>
+      <option value="10080">7 Tage</option></select></label>
+    <label><input type="checkbox" id="s1-commit"> Fehlerfall: Neustart ab committed Offset statt vom Anfang</label>
+  </div>
+  <div class="flow" style="grid-template-columns:minmax(170px,.75fr) minmax(0,1.7fr) minmax(230px,1fr)">
+    <div class="col"><div class="colhead">Producer</div>
+      ${st.producers.map((p, i) => `<div class="node prod" id="s1-p${i}">
+        <div class="title">${p.name}</div>
+        <div class="sub">sendet Status für ${p.keys.join(' und ')}</div>
+        <div class="sub" id="s1-pl${i}"></div></div>`).join('')}
+    </div>
+    <div class="col"><div class="colhead">Kafka</div>
+      <div class="node topic" id="s1-topic">
+        <div class="title"><span>Topic <code>fahrzeug-status</code></span><span class="badge info">1 Partition</span></div>
+        <div class="cfg"><code>cleanup.policy=delete</code><code id="s1-retcfg"></code></div>
+        <div class="stats" id="s1-stats"></div>
+        <div class="logbox" id="s1-box"><div class="cells" id="s1-log"></div></div>
+        <div class="legend">
+          <span><span class="rec" style="--k:#2563eb"></span>heute</span>
+          <span><span class="rec old" style="--k:#2563eb"></span>Vortag</span>
+          <span>Farbiger Punkt: nächste Nachricht eines Consumers im Replay</span>
+        </div>
+      </div>
+    </div>
+    <div class="col"><div class="colhead">Consumer (Zustand nur im Speicher)</div>
+      ${st.consumers.map((c, i) => `<div class="node cons" id="s1-c${i}">
+        <div class="title"><span><span class="kdot" style="--k:${c.col}"></span>${c.name}</span><span class="badge" id="s1-cm${i}"></span></div>
+        <div class="sub" id="s1-ci${i}"></div>
+        <div class="btns"><button class="small" data-crash="${i}">Absturz und Neustart</button></div>
+        <table class="state" id="s1-ct${i}"></table></div>`).join('')}
+    </div>
+  </div>`;
+
+  function applyRetention() {
+    const cutoff = st.abs - st.retention;
+    let n = 0;
+    while (st.records.length && st.records[0].ts < cutoff) { st.records.shift(); n++; }
+    if (n) log(`Retention: ${n} ${n === 1 ? 'Nachricht' : 'Nachrichten'} älter als ${st.retention >= 1440 ? st.retention / 1440 + ' Tag(e)' : st.retention / 60 + ' Stunde'} gelöscht, Log Start Offset jetzt ${logStart()}`, 'warn');
+  }
+
+  function produce(i) {
+    const p = st.producers[i];
+    const key = pick(p.keys);
+    const value = pick(STATUS.filter(s => s !== st.truth[key]));
+    pulse($('#s1-p' + i));
+    fly($('#s1-p' + i), lastOrSelf($('#s1-log')), { label: `${key}: ${value}`, color: keyColor(key) }, () => {
+      st.records.push({ offset: st.nextOffset++, key, value, ts: st.abs, day: day(), p: p.name, isNew: true });
+      st.truth[key] = value;
+      render();
+    });
+  }
+
+  function apply(c, r) {
+    c.state[r.key] = { v: r.value, off: r.offset };
+    c.pos = r.offset + 1;
+    c.committed = c.pos;
+  }
+
+  function restart(c, reason) {
+    c.epoch++; c.busy = false; c.state = {};
+    if (st.commitMode) {
+      c.pos = Math.max(c.committed, logStart());
+      c.mode = 'live';
+      log(`${c.name}: ${reason}, setzt am committed Offset ${c.pos} fort. Bisheriger Zustand fehlt!`, 'err');
+    } else {
+      c.pos = logStart();
+      c.replayEnd = st.nextOffset;
+      c.replayCount = 0;
+      c.replayTotal = st.records.filter(r => r.offset < c.replayEnd).length;
+      c.mode = 'replay';
+      log(`${c.name}: ${reason}, seekToBeginning, Replay ab Offset ${c.pos} (${c.replayTotal} Nachrichten)`);
+    }
+  }
+
+  function endDay() {
+    st.running = false;
+    st.abs = (day() - 1) * 1440 + 22 * 60;
+    st.consumers.forEach(c => { c.mode = 'stopped'; c.epoch++; c.busy = false; });
+    log('Betriebsende 22:00: alle Systeme werden gestoppt, Zustand im Speicher geht verloren', 'warn');
+    render();
+  }
+
+  function nextDay() {
+    st.abs = day() * 1440 + 6 * 60;
+    st.running = true;
+    log(`Tag ${day()}, 06:00: Systeme starten`, 'ok');
+    applyRetention();
+    st.consumers.forEach(c => restart(c, 'Start'));
+    render();
+  }
+
+  // Uhr und Producer
+  Sim.every(1000, () => {
+    if (!st.running) return;
+    st.abs += 10;
+    if (tod() >= 22 * 60) { endDay(); return; }
+    applyRetention();
+    st.producers.forEach((p, i) => { if (Math.random() < 0.3) produce(i); });
+    render();
+  });
+
+  // Consumer Schleife
+  Sim.every(100, () => {
+    let dirty = false;
+    st.consumers.forEach((c, i) => {
+      if (c.mode === 'down' || c.mode === 'stopped') return;
+      if (c.pos < logStart()) {
+        log(`${c.name}: Offset ${c.pos} existiert nicht mehr (Retention), springt auf ${logStart()}`, 'warn');
+        c.pos = logStart(); dirty = true;
+      }
+      if (c.mode === 'replay') {
+        for (let k = 0; k < 3; k++) {
+          const r = next(c.pos);
+          if (!r || r.offset >= c.replayEnd) {
+            c.mode = 'live';
+            log(`${c.name}: Replay fertig nach ${c.replayCount} Nachrichten, jetzt in Echtzeit`, 'ok');
+            break;
+          }
+          apply(c, r); c.replayCount++;
+        }
+        dirty = true;
+      } else if (!c.busy) {
+        const r = next(c.pos);
+        if (!r) return;
+        c.busy = true;
+        const ep = c.epoch;
+        fly(document.getElementById('s1-r' + r.offset), $('#s1-c' + i), { label: r.key, color: keyColor(r.key), dur: 550 }, () => {
+          if (ep !== c.epoch) return;
+          apply(c, r); c.busy = false; render();
+        });
+      }
+    });
+    if (dirty) render();
+  });
+
+  stage.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.id === 's1-end') endDay();
+    if (b.id === 's1-next') nextDay();
+    if (b.dataset.crash !== undefined) {
+      const c = st.consumers[+b.dataset.crash];
+      if (!st.running || c.mode === 'down') return;
+      c.mode = 'down'; c.epoch++; c.busy = false; c.state = {};
+      log(`${c.name}: abgestürzt, Zustand im Speicher verloren`, 'err');
+      render();
+      Sim.after(1500, () => { if (st.running) restart(c, 'Neustart'); else c.mode = 'stopped'; render(); });
+    }
+  };
+  $('#s1-ret').onchange = e => { st.retention = +e.target.value; log(`retention.ms geändert auf ${st.retention * 60000}`); render(); };
+  $('#s1-commit').onchange = e => { st.commitMode = e.target.checked; log(st.commitMode ? 'Fehlerfall aktiv: Consumer nutzen nach Neustart den committed Offset' : 'Consumer lesen nach Neustart wieder vom Anfang', st.commitMode ? 'warn' : 'ok'); };
+
+  const MODE = { live: ['Echtzeit', 'live'], replay: ['Replay', 'replay'], down: ['abgestürzt', 'down'], stopped: ['gestoppt', ''] };
+  function render() {
+    $('#s1-clock').textContent = `Tag ${day()}, ${hm(tod())} Uhr`;
+    const ph = $('#s1-phase');
+    ph.textContent = st.running ? 'Betrieb' : 'Nacht: Systeme gestoppt';
+    ph.className = 'badge ' + (st.running ? 'live' : 'down');
+    $('#s1-end').disabled = !st.running;
+    $('#s1-next').disabled = st.running;
+    $('#s1-retcfg').textContent = `retention.ms=${st.retention * 60000}`;
+    $('#s1-stats').innerHTML = `Log Start Offset <b>${logStart()}</b> · Log End Offset <b>${st.nextOffset}</b> · <b>${st.records.length}</b> Nachrichten im Topic`;
+    const marks = {};
+    st.consumers.forEach(c => { if (c.mode === 'replay') { const r = next(c.pos); if (r) (marks[r.offset] = marks[r.offset] || []).push(c.col); } });
+    keepBottom($('#s1-box'), () => {
+      $('#s1-log').innerHTML = st.records.map(r => `<div class="rec${r.day < day() ? ' old' : ''}${r.isNew ? ' new' : ''}" id="s1-r${r.offset}" style="--k:${keyColor(r.key)}" title="Offset ${r.offset}: ${r.key} = ${r.value}&#10;Tag ${r.day}, ${hm(r.ts % 1440)} Uhr, von ${r.p}"><b>${r.key}</b><i>${r.offset}</i>${marks[r.offset] ? `<span class="mk">${marks[r.offset].map(c => `<s style="background:${c}"></s>`).join('')}</span>` : ''}</div>`).join('') || '<span class="empty">Topic ist leer</span>';
+    });
+    st.records.forEach(r => r.isNew = false);
+    st.producers.forEach((p, i) => {
+      $('#s1-p' + i).classList.toggle('off', !st.running);
+      $('#s1-pl' + i).innerHTML = p.keys.map(k => `${kdot(k)}${k}: ${st.truth[k] || '<span class="muted">noch keine Meldung</span>'}`).join('<br>');
+    });
+    st.consumers.forEach((c, i) => {
+      $('#s1-c' + i).classList.toggle('off', c.mode === 'down' || c.mode === 'stopped');
+      const m = $('#s1-cm' + i); m.textContent = MODE[c.mode][0]; m.className = 'badge ' + MODE[c.mode][1];
+      const lag = st.records.filter(r => r.offset >= c.pos).length;
+      $('#s1-ci' + i).innerHTML = c.mode === 'replay'
+        ? `Replay ${c.replayCount} von ${c.replayTotal} Nachrichten, Offset ${c.pos}`
+        : `Offset ${c.pos}, Lag ${lag}, committed ${c.committed}`;
+      let missing = 0;
+      $('#s1-ct' + i).innerHTML = KEYS.map(k => {
+        const s = c.state[k], t = st.truth[k];
+        let cls = '';
+        if (t !== undefined && !s) { cls = 'miss'; missing++; }
+        else if (s && s.v !== t) cls = 'stale';
+        return `<tr class="${cls}"><td>${kdot(k)}${k}</td><td>${s ? s.v : (t !== undefined ? 'fehlt' : '<span class="muted">unbekannt</span>')}</td><td class="num muted">${s ? '@' + s.off : ''}</td></tr>`;
+      }).join('');
+    });
+  }
+  render();
+  log('Tag 1 beginnt, Topic ist leer, alle Consumer laufen in Echtzeit', 'ok');
+}
+
+/* =====================================================================
+   Szenario 2: Datenlieferant mit compacted Topic
+   ===================================================================== */
+const INFO2 = `
+<h2>2. Kafka als Datenlieferant für externe Kunden</h2>
+<p>Das DWH (Data Warehouse) hält den aktuellen Zustand der Produkte. Bei jeder Änderung sendet ein Snapshot Service die <b>komplette Entität</b> (nicht nur die Änderung) mit Key = Produkt ID. Das Topic ist compacted: Kafka behält pro Key mindestens die letzte Nachricht. Externe Kunden abonnieren das Topic, erhalten jede Änderung sofort und haben nach dem Lesen vom Anfang den vollständigen aktuellen Zustand, ohne die ganze Historie zu lesen.</p>
+<h3>Vorführen</h3>
+<ol>
+<li>Änderungen laufen lassen: überholte Nachrichten werden blass, da es eine neuere Nachricht mit demselben Key gibt.</li>
+<li><b>Log Cleaner jetzt ausführen</b>: überholte Nachrichten in geschlossenen Segmenten verschwinden, das aktive Segment bleibt unberührt. Die Offsets bleiben erhalten, es entstehen Lücken.</li>
+<li>Ein Produkt <b>löschen</b>: der Service sendet einen Tombstone (Wert <code>null</code>), die Kunden entfernen das Produkt. Der Tombstone selbst wird erst bei einem späteren Lauf entfernt.</li>
+<li><b>Neuen Kunden anbinden</b>: er liest von Beginn und ist nach wenigen Nachrichten auf dem aktuellen Stand. Das Ereignislog zeigt, wie viele Nachrichten er im Vergleich zu allen gesendeten lesen musste.</li>
+</ol>
+<h3>Konfiguration</h3>
+<ul>
+<li>Topic: <code>cleanup.policy=compact</code></li>
+<li><code>min.cleanable.dirty.ratio=0.5</code>: Cleaner startet, wenn mindestens die Hälfte des Logs noch nicht bereinigt ist</li>
+<li><code>segment.ms</code> und <code>segment.bytes</code>: bestimmen, wann das aktive Segment rollt und damit kompaktierbar wird (hier vereinfacht: nach 5 Nachrichten)</li>
+<li><code>delete.retention.ms</code> (Default 24 Stunden): so lange bleiben Tombstones nach der Bereinigung sichtbar, damit auch langsame Kunden die Löschung mitbekommen (hier vereinfacht: bis zum nächsten Cleaner Lauf)</li>
+<li><code>min.compaction.lag.ms</code>: Mindestalter, bevor eine Nachricht kompaktiert werden darf</li>
+<li>Kunden: eigene <code>group.id</code> pro Kunde, <code>auto.offset.reset=earliest</code></li>
+</ul>
+<h3>Hinweise</h3>
+<div class="hint">Hinweis: Die Dirty Ratio bezieht sich nur auf geschlossene Segmente. Während sich das aktive Segment füllt, bleibt sie gleich, obwohl dort neue Versionen ankommen und ältere Nachrichten als überholt erscheinen. Erst wenn das Segment rollt, zählen seine Nachrichten als dirty. Kafka rechnet in Bytes, die Simulation vereinfacht in Nachrichten.</div>
+<div class="hint">Hinweis: Compaction garantiert nicht genau eine Nachricht pro Key. Bis zum nächsten Lauf liegen ältere Versionen weiter im Topic. Da jede Nachricht ein ganzer Snapshot ist, überschreiben Kunden einfach (Upsert), das ist idempotent.</div>
+<div class="hint">Hinweis: Externe Kunden brauchen eigene Zugangsdaten mit ACLs (Access Control Lists) nur zum Lesen des Topics und Quotas, damit ein Kunde mit vollem Replay den Cluster nicht ausbremst (siehe Kapitel Security).</div>
+<div class="hint">Hinweis: Der Snapshot Service kann die Änderungen per CDC (Change Data Capture, z.B. Debezium) oder per Trigger und Outbox Tabelle im DWH erkennen.</div>
+`;
+
+function scenario2(stage, info) {
+  const SEG = 5;
+  const NAMES = ['Bohrmaschine', 'Akkuschrauber', 'Stichsäge', 'Bandschleifer', 'Kreissäge', 'Hobel', 'Oberfräse', 'Multitool'];
+  const NEWCUST = ['Kunde C: Preisvergleich', 'Kunde D: Lieferant', 'Kunde E: App', 'Kunde F: Händler'];
+  const st = { dwh: {}, nextId: 1, nextOffset: 0, segs: [[]], consumers: [], cid: 0, newIdx: 0,
+    autoChange: true, autoClean: true, cleaning: false, t: 8 * 60, cleanRuns: 0 };
+  Sim.clock = () => hm(st.t);
+  const all = () => st.segs.flat();
+  const next = pos => all().find(r => r.offset >= pos);
+  const pad = n => String(n).padStart(5, '0');
+
+  info.innerHTML = INFO2 + '<h3>Ereignisse</h3><div class="events" id="events"></div>';
+  stage.innerHTML = `
+  <div class="statusbar">
+    <div class="clock"><span id="s2-clock"></span></div>
+    <label><input type="checkbox" id="s2-auto" checked> Automatische Änderungen im DWH</label>
+    <label><input type="checkbox" id="s2-autoclean" checked> Log Cleaner automatisch (<code>min.cleanable.dirty.ratio=0.5</code>)</label>
+    <button id="s2-clean" class="primary">Log Cleaner jetzt ausführen</button>
+  </div>
+  <div class="flow" style="grid-template-columns:minmax(470px,1.3fr) 110px minmax(0,1.2fr) minmax(240px,.9fr)">
+    <div class="col"><div class="colhead">Quelle</div>
+      <div class="node db" id="s2-dwhnode">
+        <div class="title">DWH (Data Warehouse) <span class="badge info">aktueller Zustand</span></div>
+        <div id="s2-dwh"></div>
+        <div class="btns"><button class="small" id="s2-add">+ Neues Produkt</button></div>
+      </div>
+    </div>
+    <div class="col"><div class="colhead">Service</div>
+      <div class="node svc" id="s2-svc">
+        <div class="title">Snapshot Service</div>
+        <div class="sub">erkennt die Änderung, liest die ganze Entität und sendet sie mit Key = Produkt ID. Bei Löschung: Tombstone.</div>
+      </div>
+    </div>
+    <div class="col"><div class="colhead">Kafka</div>
+      <div class="node topic" id="s2-topic">
+        <div class="title"><span>Topic <code>produkte</code></span></div>
+        <div class="cfg"><code>cleanup.policy=compact</code><code>delete.retention.ms</code></div>
+        <div class="stats" id="s2-stats"></div>
+        <div class="logbox" id="s2-box"><div id="s2-log"></div></div>
+        <div class="legend">
+          <span><span class="rec" style="--k:#2563eb"></span>aktuell</span>
+          <span><span class="rec sup" style="--k:#2563eb"></span>überholt</span>
+          <span><span class="rec clean" style="--k:#2563eb"></span>bereinigt</span>
+          <span><span class="rec dirty" style="--k:#2563eb"></span>dirty (geschlossen, noch nicht bereinigt)</span>
+          <span><span class="rec tomb" style="--k:#2563eb"></span>Tombstone</span>
+        </div>
+      </div>
+    </div>
+    <div class="col"><div class="colhead">Externe Kunden</div>
+      <div id="s2-cons" class="col"></div>
+      <button id="s2-addc">+ Neuen Kunden anbinden</button>
+    </div>
+  </div>`;
+
+  function newEntity() {
+    const id = 'P' + st.nextId;
+    st.dwh[id] = { name: NAMES[(st.nextId - 1) % NAMES.length], preis: 20 + 5 * Math.floor(Math.random() * 30), bestand: Math.floor(Math.random() * 40), version: 1 };
+    st.nextId++;
+    return id;
+  }
+
+  function appendRec(key, value) {
+    if (st.segs[st.segs.length - 1].length >= SEG) {
+      st.segs.push([]);
+      log(`Segment gerollt: ${pad(st.segs[st.segs.length - 2][0].offset)}.log ist geschlossen und kann kompaktiert werden, Dirty Ratio jetzt ${Math.round(dirtyRatio() * 100)} %`);
+    }
+    st.segs[st.segs.length - 1].push({ offset: st.nextOffset++, key, value, clean: false, tombSeen: false, isNew: true });
+  }
+
+  function send(id, from) {
+    const e = st.dwh[id];
+    const value = e ? { id, ...e } : null;
+    fly(from, $('#s2-svc'), { label: 'Änderung ' + id, color: '#64748b', dur: 500 }, () => {
+      pulse($('#s2-svc'));
+      fly($('#s2-svc'), lastOrSelf($('#s2-log .seg.active .cells')),
+        { label: value ? `${id} v${value.version} (ganzes Objekt)` : `${id} Tombstone`, color: value ? keyColor(id) : '#111827' }, () => {
+          appendRec(id, value); render();
+        });
+    });
+  }
+
+  function change(id) {
+    const e = st.dwh[id]; if (!e) return;
+    if (Math.random() < 0.5) e.preis = Math.max(5, e.preis + pick([-10, -5, 5, 10, 15]));
+    else e.bestand = Math.max(0, e.bestand + pick([-3, -2, -1, 2, 5]));
+    e.version++;
+    renderDwh(id);
+    log(`DWH: ${id} geändert (v${e.version})`);
+    send(id, document.getElementById('s2-d' + id));
+  }
+  function del(id) {
+    if (!st.dwh[id]) return;
+    const from = document.getElementById('s2-d' + id);
+    delete st.dwh[id];
+    log(`DWH: ${id} gelöscht, Service sendet Tombstone`, 'warn');
+    renderDwh();
+    send(id, from || $('#s2-dwhnode'));
+  }
+  function add() {
+    if (Object.keys(st.dwh).length >= 7) return;
+    const id = newEntity();
+    renderDwh(id);
+    log(`DWH: neues Produkt ${id}`);
+    send(id, document.getElementById('s2-d' + id));
+  }
+
+  function dirtyRatio() {
+    const closed = st.segs.slice(0, -1).flat();
+    if (!closed.length) return 0;
+    return closed.filter(r => !r.clean).length / closed.length;
+  }
+
+  function clean(manual) {
+    if (st.cleaning) return;
+    const nClosed = st.segs.length - 1;
+    const closed = st.segs.slice(0, nClosed).flat();
+    if (!closed.length) { if (manual) log('Log Cleaner: kein geschlossenes Segment vorhanden. Das aktive Segment wird nie kompaktiert.', 'warn'); return; }
+    const last = {};
+    closed.forEach(r => last[r.key] = r.offset);
+    const rm = new Set(); let sup = 0, tombs = 0;
+    closed.forEach(r => {
+      if (r.offset < last[r.key]) { rm.add(r.offset); sup++; }
+      else if (r.value === null && r.tombSeen) { rm.add(r.offset); tombs++; }
+    });
+    rm.forEach(o => { const el = document.getElementById('s2-r' + o); if (el) el.classList.add('removing'); });
+    st.cleaning = true;
+    st.cleanRuns++;
+    pulse($('#s2-topic'));
+    Sim.after(rm.size ? 500 : 0, () => {
+      const kept = closed.filter(r => !rm.has(r.offset));
+      kept.forEach(r => { r.clean = true; if (r.value === null) r.tombSeen = true; });
+      const segs = [];
+      for (let i = 0; i < kept.length; i += SEG) segs.push(kept.slice(i, i + SEG));
+      st.segs = [...segs, ...st.segs.slice(nClosed)];
+      st.cleaning = false;
+      log(`Log Cleaner Lauf ${st.cleanRuns}: ${sup} überholte Nachrichten${tombs ? ` und ${tombs} Tombstone(s)` : ''} entfernt, ${closed.length - rm.size} bleiben in geschlossenen Segmenten`, 'ok');
+      render();
+    });
+  }
+
+  function addConsumer(name, catching) {
+    const c = { id: st.cid++, name, pos: 0, state: {}, read: 0, busy: false, catching, epoch: 0, flash: null };
+    st.consumers.push(c);
+    const el = document.createElement('div');
+    el.className = 'node cons';
+    el.id = 's2-c' + c.id;
+    el.innerHTML = `<div class="title"><span>${name}</span><span class="badge" id="s2-cm${c.id}"></span></div>
+      <div class="sub" id="s2-ci${c.id}"></div>
+      <table class="state" id="s2-ct${c.id}"></table>
+      <div class="btns"><button class="small" data-rmc="${c.id}">Abo beenden</button></div>`;
+    $('#s2-cons').appendChild(el);
+    if (catching) log(`${name}: abonniert das Topic, liest ab Offset 0 (auto.offset.reset=earliest)`);
+    render();
+  }
+
+  // Start: Initiale Befüllung
+  for (let i = 0; i < 4; i++) { const id = newEntity(); appendRec(id, { id, ...st.dwh[id] }); }
+  all().forEach(r => r.isNew = false);
+  renderDwh();
+  addConsumer('Kunde A: Webshop', false);
+  addConsumer('Kunde B: Marktplatz', false);
+
+  Sim.every(1000, () => { st.t++; $('#s2-clock').textContent = `${hm(st.t)} Uhr`; });
+  Sim.every(2600, () => {
+    if (!st.autoChange) return;
+    const ids = Object.keys(st.dwh);
+    const r = Math.random();
+    if (r < 0.1 && ids.length < 6) add();
+    else if (r < 0.18 && ids.length > 3) del(pick(ids));
+    else change(pick(ids));
+  });
+  Sim.every(1500, () => { if (st.autoClean && dirtyRatio() >= 0.5) clean(false); });
+  Sim.every(100, () => {
+    st.consumers.forEach(c => {
+      if (c.busy) return;
+      const r = next(c.pos);
+      if (!r) {
+        if (c.catching) {
+          c.catching = false;
+          log(`${c.name}: vollständiger aktueller Zustand nach ${c.read} gelesenen Nachrichten (insgesamt gesendet: ${st.nextOffset})`, 'ok');
+          render();
+        }
+        return;
+      }
+      c.busy = true;
+      const ep = c.epoch;
+      fly(document.getElementById('s2-r' + r.offset), $('#s2-c' + c.id),
+        { label: r.value ? `${r.key} v${r.value.version}` : `${r.key} Tombstone`, color: r.value ? keyColor(r.key) : '#111827', dur: c.catching ? 380 : 650 }, () => {
+          if (ep !== c.epoch || !st.consumers.includes(c)) return;
+          if (r.value) c.state[r.key] = r.value; else delete c.state[r.key];
+          c.pos = r.offset + 1; c.read++; c.busy = false; c.flash = r.key;
+          render();
+        });
+    });
+  });
+
+  stage.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.chg) change(b.dataset.chg);
+    else if (b.dataset.del) del(b.dataset.del);
+    else if (b.id === 's2-add') add();
+    else if (b.id === 's2-clean') clean(true);
+    else if (b.id === 's2-addc') {
+      if (st.consumers.length >= 4) { log('Maximal 4 Kunden in dieser Demo', 'warn'); return; }
+      addConsumer(NEWCUST[st.newIdx++ % NEWCUST.length], true);
+    } else if (b.dataset.rmc !== undefined) {
+      const c = st.consumers.find(x => x.id === +b.dataset.rmc);
+      st.consumers = st.consumers.filter(x => x !== c);
+      document.getElementById('s2-c' + c.id).remove();
+      log(`${c.name}: Abo beendet`);
+    }
+  };
+  $('#s2-auto').onchange = e => st.autoChange = e.target.checked;
+  $('#s2-autoclean').onchange = e => st.autoClean = e.target.checked;
+
+  function renderDwh(flashId) {
+    const ids = Object.keys(st.dwh).sort((a, b) => a.slice(1) - b.slice(1));
+    $('#s2-dwh').innerHTML = `<table class="state"><tr><th>ID</th><th>Name</th><th class="num">Preis</th><th class="num">Bestand</th><th>Version</th><th></th></tr>
+      ${ids.map(id => { const e = st.dwh[id]; return `<tr id="s2-d${id}" class="${id === flashId ? 'flash' : ''}"><td>${kdot(id)}${id}</td><td>${e.name}</td><td class="num">${e.preis} €</td><td class="num">${e.bestand}</td><td>v${e.version}</td>
+      <td class="act"><button class="small" data-chg="${id}">ändern</button> <button class="small" data-del="${id}">löschen</button></td></tr>`; }).join('')}</table>`;
+  }
+
+  function render() {
+    $('#s2-clock').textContent = `${hm(st.t)} Uhr`;
+    const recs = all();
+    const lastOf = {};
+    recs.forEach(r => lastOf[r.key] = r.offset);
+    const ratio = dirtyRatio();
+    const closedRecs = st.segs.slice(0, -1).flat();
+    const nDirty = closedRecs.filter(r => !r.clean).length;
+    $('#s2-stats').innerHTML = `<b>${recs.length}</b> Nachrichten im Topic · <b>${st.nextOffset}</b> insgesamt gesendet · <b>${Object.keys(st.dwh).length}</b> Produkte im DWH<br>
+      Dirty Ratio <span class="meter"><span style="width:${Math.round(ratio * 100)}%"></span><em></em></span><b>${Math.round(ratio * 100)} %</b> <span class="muted">= ${nDirty} dirty von ${closedRecs.length} Nachrichten in geschlossenen Segmenten. Das aktive Segment zählt nicht mit, der Wert ändert sich nur beim Rollen eines Segments und beim Cleaner Lauf.</span>`;
+    keepBottom($('#s2-box'), () => {
+      $('#s2-log').innerHTML = st.segs.map((s, i) => {
+        const active = i === st.segs.length - 1;
+        const base = s.length ? s[0].offset : st.nextOffset;
+        return `<div class="seg${active ? ' active' : ''}"><div class="seghead">${active ? '<b>aktives Segment</b>' : 'Segment'} <code>${pad(base)}.log</code>${active ? ' wird nicht kompaktiert' : ''}</div>
+        <div class="cells">${s.map(r => {
+          const cls = [r.value === null ? 'tomb' : '', r.offset < lastOf[r.key] ? 'sup' : '', r.clean && r.value !== null ? 'clean' : '', !active && !r.clean ? 'dirty' : '', r.isNew ? 'new' : ''].join(' ');
+          const tip = r.value ? `Offset ${r.offset}, Key ${r.key}: ${r.value.name}, ${r.value.preis} €, Bestand ${r.value.bestand}, v${r.value.version}` : `Offset ${r.offset}, Key ${r.key}: null (Tombstone)`;
+          return `<div class="rec ${cls}" id="s2-r${r.offset}" style="--k:${keyColor(r.key)}" title="${tip}"><b>${r.key}</b><i>${r.value ? 'v' + r.value.version : 'null'}</i><u>${r.offset}</u></div>`;
+        }).join('') || '<span class="empty">leer</span>'}</div></div>`;
+      }).join('');
+    });
+    recs.forEach(r => r.isNew = false);
+    st.consumers.forEach(c => {
+      const m = $('#s2-cm' + c.id);
+      m.textContent = c.catching ? 'liest vom Anfang' : 'aktuell'; m.className = 'badge ' + (c.catching ? 'replay' : 'live');
+      $('#s2-ci' + c.id).innerHTML = `Offset ${c.pos} · ${c.read} Nachrichten gelesen · ${Object.keys(c.state).length} Produkte`;
+      const keys = [...new Set([...Object.keys(c.state), ...Object.keys(st.dwh)])].sort((a, b) => a.slice(1) - b.slice(1));
+      $('#s2-ct' + c.id).innerHTML = `<tr><th>ID</th><th class="num">Preis</th><th class="num">Bestand</th><th>Version</th></tr>` + keys.map(k => {
+        const s = c.state[k], d = st.dwh[k];
+        let cls = !s ? 'miss' : (!d || s.version !== d.version) ? 'stale' : '';
+        if (k === c.flash) cls += ' flash';
+        return s ? `<tr class="${cls}"><td>${kdot(k)}${k}</td><td class="num">${s.preis} €</td><td class="num">${s.bestand}</td><td>v${s.version}${!d ? ' (gelöscht im DWH)' : ''}</td></tr>`
+          : `<tr class="${cls}"><td>${kdot(k)}${k}</td><td colspan="3">fehlt noch</td></tr>`;
+      }).join('');
+      c.flash = null;
+    });
+  }
+  render();
+  log('Topic enthält die initiale Befüllung mit 4 Produkten', 'ok');
+}
+
+/* =====================================================================
+   Szenario 3: Lambda Architektur
+   ===================================================================== */
+const INFO3 = `
+<h2>3. Lambda Architektur</h2>
+<p>Das Quellsystem bucht laufend auf Konten. Es gibt zwei Wege zu den Konsumenten:</p>
+<ul>
+<li><b>Speed Layer (Kafka):</b> jede Buchung geht sofort als <b>Delta</b> (z.B. <code>K2 +50</code>) in ein Topic. Consumer erhalten sie in Echtzeit, müssen den Zustand aber selbst aus den Deltas zusammenrechnen.</li>
+<li><b>Batch Layer (Datenbank):</b> ein Batch Job aktualisiert die Datenbank nur in Intervallen. Wer die Datenbank abfragt, erhält immer das <b>ganze Objekt</b> (Saldo), aber verzögert.</li>
+</ul>
+<h3>Vorführen</h3>
+<ol>
+<li>Laufen lassen: die Salden der Datenbank Consumer hinken hinterher (gelb, Abweichung und Datenalter in Minuten).</li>
+<li><b>Verdächtige Buchung auslösen</b>: die Betrugserkennung schlägt sofort an, in der Datenbank taucht sie erst nach dem nächsten Batch Lauf auf.</li>
+<li><b>Dashboard neu starten</b>: es lädt den letzten Snapshot aus der Datenbank (mit gespeichertem Kafka Offset) und spielt danach alle Deltas ab diesem Offset aus Kafka nach.</li>
+<li>Fehlerfall aktivieren und das Dashboard neu starten: ohne Basis Snapshot ergeben die Deltas allein einen falschen Saldo.</li>
+<li>Batch Intervall verändern und die Verzögerung der Datenbank Consumer beobachten.</li>
+</ol>
+<h3>Konfiguration</h3>
+<ul>
+<li>Topic: <code>cleanup.policy=delete</code>, <code>retention.ms</code> deutlich länger als das Batch Intervall, sonst fehlen nach einem Neustart Deltas zwischen Snapshot und jetzt</li>
+<li>Die Datenbank speichert mit jedem Batch Lauf den Kafka Offset, bis zu dem sie vollständig ist (Watermark)</li>
+<li>Key = Konto, damit die Deltas eines Kontos in Reihenfolge verarbeitet werden</li>
+<li>Delta Consumer: Duplikate vermeiden, z.B. Idempotenz über eine Buchungs ID oder Exactly Once Semantik</li>
+</ul>
+<h3>Hinweise</h3>
+<div class="hint">Hinweis: Deltas sind nicht idempotent. Wird <code>K2 +50</code> doppelt verarbeitet, stimmt der Saldo nicht mehr (siehe Kapitel Message Delivery Semantics). Ganze Objekte wie in Szenario 2 haben dieses Problem nicht.</div>
+<div class="hint">Hinweis: Kritik an Lambda: dieselbe Logik existiert zweimal (Batch und Speed). Die Kappa Architektur verzichtet auf den Batch Layer und berechnet alles aus dem Kafka Log, bei Bedarf per Replay.</div>
+<div class="hint">Hinweis: ETL (Extract, Transform, Load) bezeichnet den Batch Job, der Daten aus dem Quellsystem lädt, umrechnet und in die Datenbank schreibt.</div>
+`;
+
+function scenario3(stage, info) {
+  const KEYS = ['K1', 'K2', 'K3', 'K4'];
+  const st = {
+    min: 9 * 60,
+    truth: { K1: { saldo: 1200, n: 0 }, K2: { saldo: 350, n: 0 }, K3: { saldo: 4800, n: 0 }, K4: { saldo: 90, n: 0 } },
+    records: [], nextOffset: 0, pending: [], batchEvery: 15, nextBatch: 15, batchBusy: false, failMode: false
+  };
+  st.db = { data: clone(st.truth), at: st.min, bis: -1 };
+  st.fraud = { pos: 0, recent: [], busy: false };
+  st.dash = { pos: 0, state: clone(st.truth), busy: false, epoch: 0, mode: 'live', base: 'Snapshot 09:00, Deltas ab Offset 0' };
+  st.dbc = [
+    { id: 0, name: 'Partner API', every: 5, left: 3, view: clone(st.db.data), at: st.db.at, bis: -1 },
+    { id: 1, name: 'Reporting', every: 20, left: 12, view: clone(st.db.data), at: st.db.at, bis: -1 }];
+  Sim.clock = () => hm(st.min);
+
+  info.innerHTML = INFO3 + '<h3>Ereignisse</h3><div class="events" id="events"></div>';
+  stage.innerHTML = `
+  <div class="statusbar">
+    <div class="clock"><span id="s3-clock"></span></div>
+    <button id="s3-big" class="primary">Verdächtige Buchung auslösen (K3 -3000)</button>
+    <button id="s3-restart">Dashboard neu starten</button>
+    <label><input type="checkbox" id="s3-fail"> Fehlerfall: Dashboard startet ohne Basis Snapshot</label>
+  </div>
+  <div class="flow" style="grid-template-columns:minmax(200px,.55fr) minmax(0,2fr)">
+    <div class="col"><div class="colhead">Quelle</div>
+      <div class="node prod" id="s3-src">
+        <div class="title">Quellsystem <span class="badge info">Wahrheit</span></div>
+        <div class="sub">bucht laufend auf Konten</div>
+        <table class="state" id="s3-truth"></table>
+      </div>
+      <div class="arrow">⇅</div>
+      <div class="sub muted" style="font-size:12.5px">Jede Buchung geht sofort an Kafka und wird zusätzlich für den nächsten Batch Lauf vorgemerkt.</div>
+    </div>
+    <div class="col">
+      <div class="lane speed">
+        <div class="lanehead"><span>Speed Layer: Kafka, Deltas, Echtzeit</span></div>
+        <div class="node topic" id="s3-topic">
+          <div class="title"><span>Topic <code>buchungen</code></span></div>
+          <div class="cfg"><code>cleanup.policy=delete</code><code>retention.ms=604800000 (7 Tage)</code></div>
+          <div class="stats" id="s3-stats"></div>
+          <div class="logbox" style="max-height:170px" id="s3-box"><div class="cells" id="s3-log"></div></div>
+        </div>
+        <div class="col">
+          <div class="node cons" id="s3-fraud">
+            <div class="title">Betrugserkennung <span class="badge live">Echtzeit</span></div>
+            <div class="sub">zustandslos, prüft jedes Delta einzeln (Alarm ab 1000)</div>
+            <div class="stream" id="s3-fl"></div>
+          </div>
+          <div class="node cons" id="s3-dash">
+            <div class="title">Echtzeit Dashboard <span class="badge" id="s3-dm"></span></div>
+            <div class="sub" id="s3-di"></div>
+            <table class="state" id="s3-dt"></table>
+          </div>
+        </div>
+      </div>
+      <div class="lane batch" style="margin-top:14px">
+        <div class="lanehead"><span>Batch Layer: Datenbank, ganze Objekte, verzögert</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:12px;align-items:start">
+          <div class="node svc" id="s3-batch">
+            <div class="title">Batch Job (ETL)</div>
+            <div class="sub" id="s3-bi"></div>
+            <div class="btns">
+              <label>alle <select id="s3-every"><option value="5">5 min</option><option value="15" selected>15 min</option><option value="60">60 min</option></select></label>
+              <button class="small" id="s3-run">jetzt ausführen</button>
+            </div>
+          </div>
+          <div class="node db" id="s3-db">
+            <div class="title">Datenbank</div>
+            <div class="sub" id="s3-dbi"></div>
+            <table class="state" id="s3-dbt"></table>
+          </div>
+        </div>
+        <div class="col">
+          ${st.dbc.map(c => `<div class="node cons" id="s3-q${c.id}">
+            <div class="title">${c.name} <span class="badge info">fragt alle ${c.every} min ab</span></div>
+            <div class="sub" id="s3-qi${c.id}"></div>
+            <table class="state" id="s3-qt${c.id}"></table></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  function booking(amt, key) {
+    key = key || pick(KEYS);
+    amt = amt ?? pick([-120, -80, -50, -20, 20, 35, 50, 100, 250, 400]);
+    const r = { offset: st.nextOffset++, key, amt, min: st.min, isNew: true };
+    st.truth[key].saldo += amt; st.truth[key].n++;
+    st.pending.push(r);
+    pulse($('#s3-src'));
+    fly($('#s3-src'), lastOrSelf($('#s3-log')), { label: `${key} ${sgn(amt)}`, color: Math.abs(amt) >= 1000 ? '#b91c1c' : keyColor(key) }, () => {
+      st.records.push(r);
+      st.records.sort((a, b) => a.offset - b.offset);
+      render();
+    });
+  }
+
+  function runBatch() {
+    if (st.batchBusy) return;
+    st.batchBusy = true;
+    const snap = clone(st.truth), bis = st.nextOffset - 1, at = st.min, n = st.pending.length;
+    st.pending = [];
+    st.nextBatch = st.batchEvery;
+    pulse($('#s3-batch'));
+    log(`Batch Job startet: ${n} neue Buchungen seit dem letzten Lauf`);
+    fly($('#s3-src'), $('#s3-batch'), { label: `Export: ${n} Buchungen`, color: '#7c3aed', dur: 800 }, () => {
+      fly($('#s3-batch'), $('#s3-db'), { label: 'Upsert ganze Objekte', color: '#7c3aed', dur: 700 }, () => {
+        st.db = { data: snap, at, bis };
+        st.batchBusy = false;
+        pulse($('#s3-db'));
+        log(`Datenbank aktualisiert: Stand ${hm(at)}, vollständig bis Kafka Offset ${bis}`, 'ok');
+        render();
+      });
+    });
+  }
+
+  function poll(c) {
+    const snap = clone(st.db.data), at = st.db.at, bis = st.db.bis;
+    fly($('#s3-db'), $('#s3-q' + c.id), { label: 'ganze Objekte', color: '#7c3aed', dur: 550 }, () => {
+      c.view = snap; c.at = at; c.bis = bis; pulse($('#s3-q' + c.id)); render();
+    });
+  }
+
+  function restartDash() {
+    const d = st.dash;
+    d.epoch++; d.busy = false;
+    if (st.failMode) {
+      d.state = Object.fromEntries(KEYS.map(k => [k, { saldo: 0, n: 0 }]));
+      d.pos = st.nextOffset; d.mode = 'live'; d.base = `keine Basis, nur Deltas ab Offset ${d.pos}`;
+      log(`Dashboard: Neustart ohne Basis Snapshot, liest nur neue Deltas ab Offset ${d.pos}. Salden sind falsch!`, 'err');
+      render(); return;
+    }
+    d.state = null; d.mode = 'loading';
+    log('Dashboard: Neustart, lädt Snapshot aus der Datenbank');
+    render();
+    const ep = d.epoch, snap = clone(st.db.data), bis = st.db.bis, at = st.db.at;
+    fly($('#s3-db'), $('#s3-dash'), { label: `Snapshot bis Offset ${bis}`, color: '#7c3aed', dur: 800 }, () => {
+      if (ep !== d.epoch) return;
+      d.state = snap; d.pos = bis + 1; d.mode = 'replay';
+      d.base = `Snapshot ${hm(at)}, Deltas ab Offset ${bis + 1}`;
+      log(`Dashboard: Snapshot geladen (Stand ${hm(at)}), seek auf Offset ${bis + 1} und Deltas nachspielen`);
+      render();
+    });
+  }
+
+  Sim.every(1000, () => {
+    st.min++;
+    if (Math.random() < 0.55) booking();
+    st.nextBatch--;
+    if (st.nextBatch <= 0) runBatch();
+    st.dbc.forEach(c => { if (--c.left <= 0) { c.left = c.every; poll(c); } });
+    render();
+  });
+
+  Sim.every(100, () => {
+    const f = st.fraud;
+    if (!f.busy) {
+      const r = st.records.find(x => x.offset === f.pos);
+      if (r) {
+        f.busy = true;
+        fly(document.getElementById('s3-r' + r.offset), $('#s3-fraud'), { label: `${r.key} ${sgn(r.amt)}`, color: keyColor(r.key), dur: 550 }, () => {
+          f.recent.unshift(r); f.recent = f.recent.slice(0, 5);
+          f.pos = r.offset + 1; f.busy = false;
+          if (Math.abs(r.amt) >= 1000) { log(`Betrugserkennung: ALARM für ${r.key} ${sgn(r.amt)}, Sekunden nach der Buchung`, 'err'); pulse($('#s3-fraud')); }
+          render();
+        });
+      }
+    }
+    const d = st.dash;
+    if (d.mode !== 'loading' && !d.busy) {
+      const r = st.records.find(x => x.offset === d.pos);
+      if (!r) {
+        if (d.mode === 'replay') { d.mode = 'live'; log('Dashboard: alle Deltas nachgespielt, jetzt in Echtzeit', 'ok'); render(); }
+        return;
+      }
+      d.busy = true;
+      const ep = d.epoch;
+      fly(document.getElementById('s3-r' + r.offset), $('#s3-dash'), { label: `${r.key} ${sgn(r.amt)}`, color: keyColor(r.key), dur: d.mode === 'replay' ? 260 : 600 }, () => {
+        if (ep !== d.epoch) return;
+        d.state[r.key].saldo += r.amt; d.state[r.key].n++;
+        d.pos = r.offset + 1; d.busy = false;
+        render();
+      });
+    }
+  });
+
+  stage.onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.id === 's3-big') { log('Quellsystem: Buchung K3 -3000', 'warn'); booking(-3000, 'K3'); }
+    if (b.id === 's3-restart') restartDash();
+    if (b.id === 's3-run') runBatch();
+  };
+  $('#s3-fail').onchange = e => { st.failMode = e.target.checked; };
+  $('#s3-every').onchange = e => { st.batchEvery = +e.target.value; st.nextBatch = Math.min(st.nextBatch, st.batchEvery); log(`Batch Intervall: alle ${st.batchEvery} Minuten`); render(); };
+
+  const diffCell = (v, t) => {
+    const d = v - t;
+    return d === 0 ? '<td class="num pos">aktuell</td>' : `<td class="num ${d < 0 ? 'neg' : 'pos'}">${sgn(d)}</td>`;
+  };
+  function render() {
+    $('#s3-clock').textContent = `${hm(st.min)} Uhr`;
+    $('#s3-truth').innerHTML = `<tr><th>Konto</th><th class="num">Saldo</th><th class="num">Buchungen</th></tr>` +
+      KEYS.map(k => `<tr><td>${kdot(k)}${k}</td><td class="num"><b>${st.truth[k].saldo}</b></td><td class="num">${st.truth[k].n}</td></tr>`).join('');
+    $('#s3-stats').innerHTML = `<b>${st.records.length}</b> Deltas im Topic · letzter Offset <b>${st.nextOffset - 1}</b> · Anzeige der letzten 40`;
+    keepBottom($('#s3-box'), () => {
+      $('#s3-log').innerHTML = st.records.slice(-40).map(r => `<div class="rec${Math.abs(r.amt) >= 1000 ? ' big' : ''}${r.isNew ? ' new' : ''}" id="s3-r${r.offset}" style="--k:${keyColor(r.key)};width:46px" title="Offset ${r.offset}: ${r.key} ${sgn(r.amt)} um ${hm(r.min)}"><b>${r.key}</b><i class="${r.amt < 0 ? 'neg' : 'pos'}">${sgn(r.amt)}</i><u>${r.offset}</u></div>`).join('') || '<span class="empty">noch keine Buchungen</span>';
+    });
+    st.records.forEach(r => r.isNew = false);
+    $('#s3-fl').innerHTML = st.fraud.recent.map(r => `<div class="${Math.abs(r.amt) >= 1000 ? 'alarm' : ''}">${kdot(r.key)}${r.key} <span class="${r.amt < 0 ? 'neg' : 'pos'}">${sgn(r.amt)}</span> <span class="muted">Offset ${r.offset}, ${hm(r.min)}</span>${Math.abs(r.amt) >= 1000 ? ' ALARM' : ''}</div>`).join('') || '<div class="muted">wartet auf Deltas</div>';
+    const d = st.dash;
+    const dm = $('#s3-dm');
+    const MODES = { live: ['Echtzeit', 'live'], replay: ['spielt Deltas nach', 'replay'], loading: ['lädt Snapshot', 'replay'] };
+    dm.textContent = MODES[d.mode][0]; dm.className = 'badge ' + MODES[d.mode][1];
+    const lag = Math.max(0, st.nextOffset - d.pos);
+    $('#s3-di').innerHTML = `Basis: ${d.base}<br>Offset ${d.pos}, Lag ${lag} Deltas`;
+    $('#s3-dt').innerHTML = d.state ? `<tr><th>Konto</th><th class="num">Saldo</th><th class="num">Abweichung zur Quelle</th></tr>` + KEYS.map(k => {
+      const v = d.state[k].saldo, t = st.truth[k].saldo;
+      return `<tr class="${v === t ? '' : (st.failMode && d.base.startsWith('keine') ? 'miss' : 'stale')}"><td>${kdot(k)}${k}</td><td class="num">${v}</td>${diffCell(v, t)}</tr>`;
+    }).join('') : '<tr><td class="muted">kein Zustand</td></tr>';
+    $('#s3-bi').innerHTML = `nächster Lauf in <b>${st.batchBusy ? 0 : st.nextBatch} min</b><br><b>${st.pending.length}</b> Buchungen vorgemerkt`;
+    $('#s3-dbi').innerHTML = `Stand <b>${hm(st.db.at)}</b>, vollständig bis Offset <b>${st.db.bis}</b>`;
+    $('#s3-dbt').innerHTML = `<tr><th>Konto</th><th class="num">Saldo</th><th class="num">Buchungen</th></tr>` +
+      KEYS.map(k => `<tr><td>${kdot(k)}${k}</td><td class="num">${st.db.data[k].saldo}</td><td class="num">${st.db.data[k].n}</td></tr>`).join('');
+    st.dbc.forEach(c => {
+      $('#s3-qi' + c.id).innerHTML = `Datenalter <b>${st.min - c.at} min</b> (Stand ${hm(c.at)}), nächste Abfrage in ${c.left} min`;
+      $('#s3-qt' + c.id).innerHTML = `<tr><th>Konto</th><th class="num">Saldo</th><th class="num">Abweichung zur Quelle</th></tr>` + KEYS.map(k => {
+        const v = c.view[k].saldo, t = st.truth[k].saldo;
+        return `<tr class="${v === t ? '' : 'stale'}"><td>${kdot(k)}${k}</td><td class="num">${v}</td>${diffCell(v, t)}</tr>`;
+      }).join('');
+    });
+  }
+  render();
+  log('Start: Datenbank und Dashboard haben den Stand 09:00', 'ok');
+}
+
+/* ---------- Rahmen: Tabs, Pause, Tempo ---------- */
+const SCEN = [scenario1, scenario2, scenario3];
+let current = 0;
+function mount(i) {
+  current = i;
+  Sim.reset();
+  const stage = $('#stage'), info = $('#info');
+  stage.onclick = null;
+  stage.innerHTML = ''; info.innerHTML = '';
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', +b.dataset.tab === i));
+  SCEN[i](stage, info);
+  history.replaceState(null, '', '#' + (i + 1));
+}
+function setPaused(p) {
+  Sim.paused = p;
+  $('#pause').textContent = p ? 'Weiter' : 'Pause';
+  anims.forEach(a => p ? a.pause() : a.play());
+}
+$('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) mount(+b.dataset.tab); };
+$('#pause').onclick = () => setPaused(!Sim.paused);
+$('#reset').onclick = () => mount(current);
+$('#speed').onchange = e => { Sim.speed = +e.target.value; };
+document.addEventListener('keydown', e => {
+  if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if (e.code === 'Space') { e.preventDefault(); setPaused(!Sim.paused); }
+  if (['1', '2', '3'].includes(e.key)) mount(+e.key - 1);
+});
+const startTab = parseInt(location.hash.slice(1), 10);
+mount(startTab >= 1 && startTab <= 3 ? startTab - 1 : 0);
+</script>
+</body>
+</html>
